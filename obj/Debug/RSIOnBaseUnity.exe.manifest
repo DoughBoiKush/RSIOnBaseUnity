@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <asmv1:assembly xsi:schemaLocation="urn:schemas-microsoft-com:asm.v1 assembly.adaptive.xsd" manifestVersion="1.0" xmlns:asmv1="urn:schemas-microsoft-com:asm.v1" xmlns="urn:schemas-microsoft-com:asm.v2" xmlns:asmv2="urn:schemas-microsoft-com:asm.v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:co.v1="urn:schemas-microsoft-com:clickonce.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3" xmlns:dsig="http://www.w3.org/2000/09/xmldsig#" xmlns:co.v2="urn:schemas-microsoft-com:clickonce.v2">
-  <asmv1:assemblyIdentity name="RSIOnBaseUnity.exe" version="1.0.0.0" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="msil" type="win32" />
+  <asmv1:assemblyIdentity name="RSIOnBaseUnity.exe" version="1.0.0.1" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="msil" type="win32" />
   <application />
   <entryPoint>
     <assemblyIdentity name="RSIOnBaseUnity" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
@@ -66,42 +66,24 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="RSIOnBaseUnity.exe" size="8616">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="RSIOnBaseUnity.exe" size="12200">
       <assemblyIdentity name="RSIOnBaseUnity" version="1.0.0.0" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>I2D7I1PRJ1msTy4Jo4Y7U+FdfQqsotYwvWV43kqRoTk=</dsig:DigestValue>
+        <dsig:DigestValue>oMp3dMSHRrsouGaKykwgaOZemJ3X9au52UzMIH7Rgms=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
-  <file name="Libraries\Hyland.Types.dll" size="446464">
+  <file name="RSIOnBaseUnity.exe.config" size="595">
     <hash>
       <dsig:Transforms>
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>tt0jJYydqUlrxtl/h041WZpMVAjSbLKXacNC0WO7HDg=</dsig:DigestValue>
-    </hash>
-  </file>
-  <file name="Libraries\Hyland.Unity.dll" size="845312">
-    <hash>
-      <dsig:Transforms>
-        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
-      </dsig:Transforms>
-      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>D7Fr99dtBszZEPvuq1KXeBnww7RBaKw9EFXvrwNmI+k=</dsig:DigestValue>
-    </hash>
-  </file>
-  <file name="RSIOnBaseUnity.exe.config" size="444">
-    <hash>
-      <dsig:Transforms>
-        <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
-      </dsig:Transforms>
-      <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>AeSkK8LUb/yG74m2z2WB36/5EpyCivz/PJzYe1Thlr4=</dsig:DigestValue>
+      <dsig:DigestValue>MWS+HNxgftsq/cBfW0kji6P3uLD9JBdNEVX/B3lAGsE=</dsig:DigestValue>
     </hash>
   </file>
 </asmv1:assembly>

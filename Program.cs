@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using Hyland.Unity;
 
@@ -9,11 +10,106 @@ namespace RSIOnBaseUnity
         private static string appServerURL = System.Configuration.ConfigurationManager.AppSettings["appServerURL"].ToString();
         private static string username = System.Configuration.ConfigurationManager.AppSettings["username"].ToString();
         private static string password = System.Configuration.ConfigurationManager.AppSettings["password"].ToString();
-        private static string dataSource = System.Configuration.ConfigurationManager.AppSettings["dataSource"].ToString();     
-
-        private static Application Connect()
+        private static string dataSource = System.Configuration.ConfigurationManager.AppSettings["dataSource"].ToString();
+        private static string documentTypeGroup = System.Configuration.ConfigurationManager.AppSettings["documentTypeGroup"].ToString();
+        private static string documentType = System.Configuration.ConfigurationManager.AppSettings["documentType"].ToString();
+        private static string fileType = System.Configuration.ConfigurationManager.AppSettings["fileType"].ToString();
+                                             
+        private static Application app;
+        private static DocumentTypeGroup docTypeGroup;
+                                                      
+        private static void GetDocumentTypeGroup()
         {
-            Application app = null;
+            Console.Out.WriteLine("Attempting to Get Document type group: " + documentTypeGroup);
+
+            docTypeGroup = app.Core.DocumentTypeGroups.Find(documentTypeGroup);
+                         
+            if (docTypeGroup == null)
+            {
+                throw new Exception(documentTypeGroup + " Document type group was not found.");
+            }
+
+            Console.Out.WriteLine(documentTypeGroup + " Document type group was found.");
+        }
+        private static void GetDocumentTypes()
+        {
+            Console.Out.WriteLine("Attempting to Get Document types for group: " + documentTypeGroup);
+
+            foreach (var dt in docTypeGroup.DocumentTypes)
+            {
+                Console.Out.WriteLine("Document Type: " + dt.Name);
+                foreach (var krt in dt.KeywordRecordTypes)
+                {
+                    //Console.Out.WriteLine("Keyword Record Types: " + krt.Name);
+                    Console.Out.WriteLine("Keyword Types: ");
+                    foreach (var kt in krt.KeywordTypes)
+                    {
+                        Console.Out.WriteLine(kt.Name + " : " + kt.ID);
+                    }
+                    Console.Out.WriteLine("");
+                }    
+            }
+
+            Console.Out.WriteLine("Keyword Record Types: ");
+            foreach (var krt in app.Core.KeywordRecordTypes)
+            {
+                Console.Out.WriteLine(krt.Name);
+            }
+            Console.Out.WriteLine("");
+        }
+
+        private static void ArchiveDocument()
+        {
+            Console.Out.WriteLine("Attempting to archive a document...");
+
+            DocumentType docType = docTypeGroup.DocumentTypes.Find(documentType);
+            if (docType == null)
+            {
+                throw new Exception("Document type was not found");
+            }
+
+            FileType fType = app.Core.FileTypes.Find(fileType);
+            if (fType == null)
+            {
+                throw new Exception("File type was not found");
+            }
+
+            StoreNewDocumentProperties storeDocumentProperties = app.Core.Storage.CreateStoreNewDocumentProperties(docType, fType);
+                                                                                
+            //KeywordRecordType keywordRecordType = app.Core.KeywordRecordTypes.Find("RSI - Document Keyword Group");
+            KeywordRecordType keywordRecordType = docType.KeywordRecordTypes[0];
+            EditableKeywordRecord editableKeywordRecord = keywordRecordType.CreateEditableKeywordRecord();
+                                                   
+            foreach (var kt in keywordRecordType.KeywordTypes)
+            {
+                if (kt.Name.Equals("DLN"))
+                {
+                    editableKeywordRecord.AddKeyword(kt.CreateKeyword("06122018"));
+                }
+                if (kt.Name.Equals("Content Type"))
+                {
+                    editableKeywordRecord.AddKeyword(kt.CreateKeyword("RETURN"));
+                }
+            }                                                                     
+
+            storeDocumentProperties.AddKeywordRecord(editableKeywordRecord); 
+
+            storeDocumentProperties.DocumentDate = DateTime.Now;
+            storeDocumentProperties.Comment = "RSI OnBase Unity Application";
+            storeDocumentProperties.Options = StoreDocumentOptions.SkipWorkflow;
+                                             
+            List<string> fileList = new List<string>();
+            fileList.Add(@"D:\GPSCode\RSIOnBaseUnity\Files\Sample.pdf");
+
+            Document newDocument = app.Core.Storage.StoreNewDocument(fileList, storeDocumentProperties);
+
+            Console.Out.WriteLine(string.Format("Document import was successful. New Document ID: {0}", newDocument.ID.ToString()));
+            Console.Out.WriteLine();
+        }
+
+        private static void Connect()
+        {
+            app = null;
 
             AuthenticationProperties authProps = Application.CreateOnBaseAuthenticationProperties(appServerURL, username, password, dataSource);
             authProps.LicenseType = LicenseType.Default;
@@ -64,12 +160,10 @@ namespace RSIOnBaseUnity
             {
                 Console.Out.WriteLine("Connection Successful. Connection ID: " + app.SessionID);
                 Console.Out.WriteLine();
-            }
-
-            return app;
+            }   
         }
 
-        private static void Disconnect(Application app)
+        private static void Disconnect()
         {
             Console.Out.WriteLine("Attempting to close connection...");
 
@@ -94,13 +188,17 @@ namespace RSIOnBaseUnity
         public static void Main(string[] args)
         {
             try
-            {                                                       
-                Application app = Connect();
-
+            {
+                Connect();
                 if (app != null)
                 {
-                    Disconnect(app);
-                }
+                    GetDocumentTypeGroup();
+                    if (docTypeGroup != null)
+                    {
+                        GetDocumentTypes();
+                        ArchiveDocument();
+                    }                     
+                }                    
             }
             catch (WebException ex)
             {
@@ -116,6 +214,13 @@ namespace RSIOnBaseUnity
             {
                 Console.Out.WriteLine("General error: " + ex.Message);
                 Console.Out.WriteLine();
+            }
+            finally
+            {
+                if (app != null)
+                {
+                    Disconnect();
+                }              
             }
 
             Console.WriteLine("Press any key to continue...");
