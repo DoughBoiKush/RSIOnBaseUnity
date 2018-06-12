@@ -1,0 +1,13 @@
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\bin\Debug\RSIOnBaseUnity.exe.config
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\bin\Debug\RSIOnBaseUnity.exe
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\bin\Debug\RSIOnBaseUnity.pdb
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\bin\Debug\Hyland.Types.dll
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\bin\Debug\Hyland.Unity.dll
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\obj\Debug\RSIOnBaseUnity.csprojResolveAssemblyReference.cache
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\obj\Debug\RSIOnBaseUnity.csproj.CoreCompileInputs.cache
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\obj\Debug\RSIOnBaseUnity.exe
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\obj\Debug\RSIOnBaseUnity.pdb
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\bin\Debug\RSIOnBaseUnity.exe.manifest
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\bin\Debug\RSIOnBaseUnity.application
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\obj\Debug\RSIOnBaseUnity.exe.manifest
+D:\GPSCode\RSIOnBaseUnity\RSIOnBaseUnity\obj\Debug\RSIOnBaseUnity.application
