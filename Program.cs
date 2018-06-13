@@ -1,46 +1,52 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net;
 using Hyland.Unity;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace RSIOnBaseUnity
 {
     public class Program
     {
-        private static string appServerURL = System.Configuration.ConfigurationManager.AppSettings["appServerURL"].ToString();
-        private static string username = System.Configuration.ConfigurationManager.AppSettings["username"].ToString();
-        private static string password = System.Configuration.ConfigurationManager.AppSettings["password"].ToString();
-        private static string dataSource = System.Configuration.ConfigurationManager.AppSettings["dataSource"].ToString();
-        private static string documentTypeGroup = System.Configuration.ConfigurationManager.AppSettings["documentTypeGroup"].ToString();
-        private static string documentType = System.Configuration.ConfigurationManager.AppSettings["documentType"].ToString();
-        private static string fileType = System.Configuration.ConfigurationManager.AppSettings["fileType"].ToString();
-                                             
+        private static string APP_SERVER_URL = System.Configuration.ConfigurationManager.AppSettings["appServerURL"].ToString();
+        private static string USERNAME = System.Configuration.ConfigurationManager.AppSettings["username"].ToString();
+        private static string PASSWORD = System.Configuration.ConfigurationManager.AppSettings["password"].ToString();
+        private static string DATA_SOURCE = System.Configuration.ConfigurationManager.AppSettings["dataSource"].ToString();
+        private static string DOCUMENT_TYPE_GROUP = System.Configuration.ConfigurationManager.AppSettings["documentTypeGroup"].ToString();
+        private static string DOCUMENT_TYPE = System.Configuration.ConfigurationManager.AppSettings["documentType"].ToString();
+        private static string FILE_TYPE = System.Configuration.ConfigurationManager.AppSettings["fileType"].ToString();
+        private static string CONTENT_UPLOAD = System.Configuration.ConfigurationManager.AppSettings["contentUpload"].ToString();
+        private static string CONTENT_DOWNLOAD = System.Configuration.ConfigurationManager.AppSettings["contentDownload"].ToString();
+
         private static Application app;
         private static DocumentTypeGroup docTypeGroup;
                                                       
         private static void GetDocumentTypeGroup()
         {
-            Console.Out.WriteLine("Attempting to Get Document type group: " + documentTypeGroup);
+            Console.Out.WriteLine("Attempting to Get Document type group: " + DOCUMENT_TYPE_GROUP);
 
-            docTypeGroup = app.Core.DocumentTypeGroups.Find(documentTypeGroup);
+            docTypeGroup = app.Core.DocumentTypeGroups.Find(DOCUMENT_TYPE_GROUP);
                          
             if (docTypeGroup == null)
             {
-                throw new Exception(documentTypeGroup + " Document type group was not found.");
+                throw new Exception(DOCUMENT_TYPE_GROUP + " Document type group was not found.");
             }
 
-            Console.Out.WriteLine(documentTypeGroup + " Document type group was found.");
+            Console.Out.WriteLine(DOCUMENT_TYPE_GROUP + " Document type group was found.");
         }
         private static void GetDocumentTypes()
         {
-            Console.Out.WriteLine("Attempting to Get Document types for group: " + documentTypeGroup);
+            Console.Out.WriteLine("Attempting to Get Document types for group: " + DOCUMENT_TYPE_GROUP);
+            Console.Out.WriteLine("");
 
             foreach (var dt in docTypeGroup.DocumentTypes)
             {
-                Console.Out.WriteLine("Document Type: " + dt.Name);
+                Console.Out.WriteLine("Document Type: " + dt.Name + " : " + dt.ID);
                 foreach (var krt in dt.KeywordRecordTypes)
-                {
-                    //Console.Out.WriteLine("Keyword Record Types: " + krt.Name);
+                {                                                                
                     Console.Out.WriteLine("Keyword Types: ");
                     foreach (var kt in krt.KeywordTypes)
                     {
@@ -62,48 +68,49 @@ namespace RSIOnBaseUnity
         {
             Console.Out.WriteLine("Attempting to archive a document...");
 
-            DocumentType docType = docTypeGroup.DocumentTypes.Find(documentType);
+            DocumentType docType = docTypeGroup.DocumentTypes.Find(DOCUMENT_TYPE);
             if (docType == null)
             {
                 throw new Exception("Document type was not found");
             }
 
-            FileType fType = app.Core.FileTypes.Find(fileType);
+            FileType fType = app.Core.FileTypes.Find(FILE_TYPE);
             if (fType == null)
             {
                 throw new Exception("File type was not found");
             }
 
             StoreNewDocumentProperties storeDocumentProperties = app.Core.Storage.CreateStoreNewDocumentProperties(docType, fType);
-                                                                                
-            //KeywordRecordType keywordRecordType = app.Core.KeywordRecordTypes.Find("RSI - Document Keyword Group");
             KeywordRecordType keywordRecordType = docType.KeywordRecordTypes[0];
-            EditableKeywordRecord editableKeywordRecord = keywordRecordType.CreateEditableKeywordRecord();
-                                                   
-            foreach (var kt in keywordRecordType.KeywordTypes)
+            
+            string inputJSON = File.ReadAllText(CONTENT_UPLOAD + "\\test.json");
+
+            IList<JToken> contents = JToken.Parse(inputJSON)["contents"].Children().ToList();  
+
+            foreach (JToken jToken in contents)
             {
-                if (kt.Name.Equals("DLN"))
+                Content jContent = jToken.ToObject<Content>();                                 
+
+                foreach (var kt in keywordRecordType.KeywordTypes)
                 {
-                    editableKeywordRecord.AddKeyword(kt.CreateKeyword("06122018"));
+                    if (jContent.keywords.ContainsKey(kt.Name))
+                    {
+                        storeDocumentProperties.AddKeyword(kt.CreateKeyword(jContent.keywords[kt.Name]));
+                    }                                                                                  
                 }
-                if (kt.Name.Equals("Content Type"))
-                {
-                    editableKeywordRecord.AddKeyword(kt.CreateKeyword("RETURN"));
-                }
-            }                                                                     
 
-            storeDocumentProperties.AddKeywordRecord(editableKeywordRecord); 
+                storeDocumentProperties.DocumentDate = DateTime.Now;
+                storeDocumentProperties.Comment = "RSI OnBase Unity Application";
+                storeDocumentProperties.Options = StoreDocumentOptions.SkipWorkflow;
 
-            storeDocumentProperties.DocumentDate = DateTime.Now;
-            storeDocumentProperties.Comment = "RSI OnBase Unity Application";
-            storeDocumentProperties.Options = StoreDocumentOptions.SkipWorkflow;
-                                             
-            List<string> fileList = new List<string>();
-            fileList.Add(@"D:\GPSCode\RSIOnBaseUnity\Files\Sample.pdf");
+                List<string> fileList = new List<string>();
+                fileList.Add(CONTENT_UPLOAD + "\\" + jContent.file);
 
-            Document newDocument = app.Core.Storage.StoreNewDocument(fileList, storeDocumentProperties);
+                Document newDocument = app.Core.Storage.StoreNewDocument(fileList, storeDocumentProperties);
 
-            Console.Out.WriteLine(string.Format("Document import was successful. New Document ID: {0}", newDocument.ID.ToString()));
+                Console.Out.WriteLine(string.Format("Document import was successful. New Document ID: {0}", newDocument.ID.ToString()));
+            }                                                                                                                           
+            
             Console.Out.WriteLine();
         }
 
@@ -111,7 +118,7 @@ namespace RSIOnBaseUnity
         {
             app = null;
 
-            AuthenticationProperties authProps = Application.CreateOnBaseAuthenticationProperties(appServerURL, username, password, dataSource);
+            AuthenticationProperties authProps = Application.CreateOnBaseAuthenticationProperties(APP_SERVER_URL, USERNAME, PASSWORD, DATA_SOURCE);
             authProps.LicenseType = LicenseType.Default;
 
             Console.Out.WriteLine("Attempting to make a connection...");
@@ -186,7 +193,7 @@ namespace RSIOnBaseUnity
         }
 
         public static void Main(string[] args)
-        {
+        {  
             try
             {
                 Connect();
