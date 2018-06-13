@@ -30,44 +30,40 @@ namespace RSIOnBaseUnity
 
         private static void GetDocumentTypeGroup()
         {
-            logger.Info("Attempting to Get Document type group: " + DOCUMENT_TYPE_GROUP);
+            logger.Info("Attempting to Get Document Type Group: " + DOCUMENT_TYPE_GROUP);
 
             docTypeGroup = app.Core.DocumentTypeGroups.Find(DOCUMENT_TYPE_GROUP);
                          
             if (docTypeGroup == null)
             {
-                throw new Exception(DOCUMENT_TYPE_GROUP + " Document type group was not found.");
+                throw new Exception("Document Type Group not found: " + DOCUMENT_TYPE_GROUP);
             }
 
-            logger.Info(DOCUMENT_TYPE_GROUP + " Document type group was found.");
+            logger.Info("Document Type Group found: " + DOCUMENT_TYPE_GROUP);
         }
         private static void GetDocumentTypes()
         {
-            logger.Info("Attempting to Get Document types for group: " + DOCUMENT_TYPE_GROUP);
-            logger.Info("");
+            logger.Info("Attempting to Get Document Types for Group: " + DOCUMENT_TYPE_GROUP);
 
             foreach (var dt in docTypeGroup.DocumentTypes)
             {
-                logger.Info("Document Type: " + dt.Name + " : " + dt.ID);
+                logger.Info("Document Type: " + dt.Name + " (ID: " + dt.ID + ")");
                 foreach (var krt in dt.KeywordRecordTypes)
                 {                                                                
-                    logger.Info("Keyword Types: ");
+                    logger.Info("Keyword Types:");
                     foreach (var kt in krt.KeywordTypes)
                     {
-                        logger.Info(kt.Name + " : " + kt.ID);
-                    }
-                    logger.Info("");
+                        logger.Info(kt.Name + " (ID: " + kt.ID + ")");
+                    }                          
                 }    
             }
 
-            logger.Info("Keyword Record Types: ");
+            logger.Info("Keyword Record Types:");
             foreach (var krt in app.Core.KeywordRecordTypes)
             {
                 logger.Info(krt.Name);
-            }
-            logger.Info("");
-        }
-
+            }               
+        } 
         private static void ArchiveDocument()
         {                                              
             logger.Info("Attempting to archive a document...");
@@ -94,6 +90,7 @@ namespace RSIOnBaseUnity
                 KeywordRecordType keywordRecordType = docType.KeywordRecordTypes[0];
                         
                 IList<JToken> contents = JToken.Parse(inputJSON)["contents"].Children().ToList();
+                documentIdList.Clear();
 
                 foreach (JToken jToken in contents)
                 {
@@ -136,8 +133,7 @@ namespace RSIOnBaseUnity
             }
                                                                
             logger.Info("");
-        }
-
+        }    
         private static void DocumentLookup()
         {
             logger.Info("Attempting to find document...");
@@ -173,10 +169,12 @@ namespace RSIOnBaseUnity
             logger.Info("");
 
             int limit = (docList.Count < 10) ? docList.Count : 10;
+            documentIdList.Clear();
 
             for (int x = 0; x < limit; x++)
             {
-                logger.Info(string.Format("{0}. {1}", (x + 1).ToString(), docList[x].DateStored.ToShortDateString()));
+                documentIdList.Add(docList[x].ID);
+                logger.Info(string.Format("{0}. {1} {2}", (x + 1).ToString(), docList[x].ID, docList[x].DateStored.ToShortDateString())); 
             }
             logger.Info("");
         }
@@ -197,9 +195,11 @@ namespace RSIOnBaseUnity
             using (QueryResult queryResults = documentQuery.ExecuteQueryResults(10L))
             {
                 logger.Info("Displaying first 10 documents returned.");
+                documentIdList.Clear();
 
                 foreach (QueryResultItem queryResultItem in queryResults.QueryResultItems)
-                {
+                {       
+                    documentIdList.Add(queryResultItem.Document.ID);
                     logger.Info(string.Format("Document ID {0} ({1} Display Column: {2})", queryResultItem.Document.ID.ToString(), queryResultItem.DisplayColumns.Count.ToString(), queryResultItem.DisplayColumns[0].Value.ToString()));
                 }
             }
@@ -226,6 +226,7 @@ namespace RSIOnBaseUnity
 
                 KeywordRecordType keywordRecordType = documentType.KeywordRecordTypes[0];
                 IList<JToken> contents = JToken.Parse(inputJSON)["contents"].Children().ToList();
+                documentIdList.Clear();
 
                 foreach (JToken jToken in contents)
                 {
@@ -241,9 +242,10 @@ namespace RSIOnBaseUnity
                     using (QueryResult queryResults = documentQuery.ExecuteQueryResults(10L))
                     {
                         logger.Info("Displaying first 10 documents returned.");
-
+                                                
                         foreach (QueryResultItem queryResultItem in queryResults.QueryResultItems)
                         {
+                            documentIdList.Add(queryResultItem.Document.ID);
                             logger.Info(string.Format("Document ID {0} ({1} Display Column: {2})", queryResultItem.Document.ID.ToString(), queryResultItem.DisplayColumns.Count.ToString(), queryResultItem.DisplayColumns[0].Value.ToString()));
                         }
                     }
@@ -284,8 +286,7 @@ namespace RSIOnBaseUnity
                 logger.Info("Document export was successful.");
             }
             logger.Info("");
-        }
-
+        }       
         private static void Connect()
         {
             app = null;
@@ -332,8 +333,7 @@ namespace RSIOnBaseUnity
             {
                 logger.Info("Connection Successful. Connection ID: " + app.SessionID);                
             }   
-        }
-
+        }  
         private static void Disconnect()
         {
             logger.Info("Attempting to close connection...");
@@ -352,8 +352,7 @@ namespace RSIOnBaseUnity
             }
 
             logger.Info("Connection closed.");                              
-        }
-
+        }    
         public static void Main(string[] args)
         {
             log4net.Config.XmlConfigurator.Configure();
@@ -366,16 +365,59 @@ namespace RSIOnBaseUnity
                     GetDocumentTypeGroup();
                     if (docTypeGroup != null)
                     {
-                        GetDocumentTypes();
-                        /*
-                        ArchiveDocument();
-                        DocumentLookup();
-                        ExecuteQuery();
-                        DocumentQuery();
-                        */
-                        KeywordQuery();
-                        //ExportDocument();
-                    }                     
+                        logger.Info("Enter 0 stopping the application.");
+                        logger.Info("Enter 1 for Getting list of Document Types with Keywords.");
+                        logger.Info("Enter 2 for Uploading Content to OnBase using upload.json file.");
+                        logger.Info("Enter 3 for Keyword Query using download.json file.");
+                        logger.Info("Enter 4 for Execute Query.");
+                        logger.Info("Enter 5 for Document Query.");
+                        logger.Info("Enter 6 for Document Lookup (depends on options from 2 to 5 to get list of document ID's).");
+                        logger.Info("Enter 7 for Downloading Content from OnBase (depends on options from 2 to 5 to get list of document ID's).");
+
+                        int inputKey = -1;
+                        Int32.TryParse(Console.ReadLine(), out inputKey);
+
+                        while (inputKey != 0)
+                        {                               
+                            switch (inputKey)
+                            {
+                                case 0:
+                                    break;
+                                case 1:
+                                    GetDocumentTypes();
+                                    break;
+                                case 2:
+                                    ArchiveDocument();
+                                    break;
+                                case 3:
+                                    KeywordQuery();
+                                    break;
+                                case 4:
+                                    ExecuteQuery();
+                                    break;
+                                case 5:
+                                    DocumentQuery();
+                                    break;
+                                case 6:
+                                    DocumentLookup();
+                                    break;
+                                case 7:
+                                    ExportDocument();
+                                    break;
+                            }
+
+                            logger.Info("Enter 0 stopping the application.");
+                            logger.Info("Enter 1 for Getting list of Document Types with Keywords.");
+                            logger.Info("Enter 2 for Uploading Content to OnBase using upload.json file.");
+                            logger.Info("Enter 3 for Keyword Query using download.json file.");
+                            logger.Info("Enter 4 for Execute Query.");
+                            logger.Info("Enter 5 for Document Query.");
+                            logger.Info("Enter 6 for Document Lookup (depends on options from 2 to 5 to get list of document ID's).");
+                            logger.Info("Enter 7 for Downloading Content from OnBase (depends on options from 2 to 5 to get list of document ID's).");
+
+                            Int32.TryParse(Console.ReadLine(), out inputKey);
+                        }   
+                    }
                 }                    
             }
             catch (WebException ex)
