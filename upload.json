@@ -1,0 +1,23 @@
+{
+	'contents': [{		
+		'file': 'Sample.pdf',
+		'keywords': {
+			'DLN': '061220181',
+			'Content Type': 'RETURN'
+		}
+	},
+	{		
+		'file': 'Sample.pdf',
+		'keywords': {
+			'DLN': '061220182',
+			'Content Type': 'RETURN'
+		}
+	},
+	{		
+		'file': 'Sample.pdf',
+		'keywords': {
+			'DLN': '061220183',
+			'Content Type': 'RETURN'
+		}
+	}]
+}
