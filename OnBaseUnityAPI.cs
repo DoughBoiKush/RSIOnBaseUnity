@@ -54,8 +54,9 @@ namespace RSIOnBaseUnity
                     foreach (var kt in krt.KeywordTypes)
                     {
                         logger.Info(kt.Name + " (ID: " + kt.ID + ")");
-                    }                          
-                }    
+                    }
+                }
+                logger.Info("");
             }
 
             logger.Info("Keyword Record Types:");
@@ -365,15 +366,20 @@ namespace RSIOnBaseUnity
                     GetDocumentTypeGroup();
                     if (docTypeGroup != null)
                     {
-                        logger.Info("Enter 0 stopping the application.");
-                        logger.Info("Enter 1 for Getting list of Document Types with Keywords.");
-                        logger.Info("Enter 2 for Uploading Content to OnBase using upload.json file.");
-                        logger.Info("Enter 3 for Keyword Query using download.json file.");
-                        logger.Info("Enter 4 for Execute Query.");
-                        logger.Info("Enter 5 for Document Query.");
-                        logger.Info("Enter 6 for Document Lookup (depends on options from 2 to 5 to get list of document ID's).");
-                        logger.Info("Enter 7 for Downloading Content from OnBase (depends on options from 2 to 5 to get list of document ID's).");
+                        string usage = "\n----------------------------------------------------- \n" +
+                            "Select Option: \n" +
+                            "0 : to exit the application. \n" +
+                            "1 : to get list of Document Types with Keywords. \n" +
+                            "2 : to upload content to OnBase using upload.json file. \n" +
+                            "3 : to perform keyword query using download.json file. \n" +
+                            "4 : to perform execute simple query. \n" +
+                            "5 : to perform document query. \n" +
+                            "6 : to lookup document (after 2-5 options). \n" +
+                            "7 : to download content from OnBase (after 2-5 options) \n" +
+                            "8 : to re-index keywords. \n" +
+                            "-----------------------------------------------------";
 
+                        logger.Info(usage);
                         int inputKey = -1;
                         Int32.TryParse(Console.ReadLine(), out inputKey);
 
@@ -404,17 +410,12 @@ namespace RSIOnBaseUnity
                                 case 7:
                                     ExportDocument();
                                     break;
+                                case 8:
+                                    ArchiveDocument();
+                                    break;
                             }
 
-                            logger.Info("Enter 0 stopping the application.");
-                            logger.Info("Enter 1 for Getting list of Document Types with Keywords.");
-                            logger.Info("Enter 2 for Uploading Content to OnBase using upload.json file.");
-                            logger.Info("Enter 3 for Keyword Query using download.json file.");
-                            logger.Info("Enter 4 for Execute Query.");
-                            logger.Info("Enter 5 for Document Query.");
-                            logger.Info("Enter 6 for Document Lookup (depends on options from 2 to 5 to get list of document ID's).");
-                            logger.Info("Enter 7 for Downloading Content from OnBase (depends on options from 2 to 5 to get list of document ID's).");
-
+                            logger.Info(usage);
                             Int32.TryParse(Console.ReadLine(), out inputKey);
                         }   
                     }
@@ -438,10 +439,7 @@ namespace RSIOnBaseUnity
                 {
                     Disconnect();
                 }              
-            }
-
-            Console.WriteLine("Press any key to continue...");
-            Console.ReadKey(true);
+            }                          
         }
     }
 }
