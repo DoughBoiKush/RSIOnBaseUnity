@@ -23,7 +23,8 @@ namespace RSIOnBaseUnity
 
         private static Application app;
         private static DocumentTypeGroup docTypeGroup;
-                                                      
+        private static List<long> documentIdList = new List<long>();
+
         private static void GetDocumentTypeGroup()
         {
             Console.Out.WriteLine("Attempting to Get Document type group: " + DOCUMENT_TYPE_GROUP);
@@ -68,49 +69,217 @@ namespace RSIOnBaseUnity
         {
             Console.Out.WriteLine("Attempting to archive a document...");
 
-            DocumentType docType = docTypeGroup.DocumentTypes.Find(DOCUMENT_TYPE);
-            if (docType == null)
+            string filePath = CONTENT_UPLOAD + "\\upload.json";
+            if (File.Exists(filePath))
+            {
+                Console.Out.WriteLine("Content upload config file found: " + filePath);
+
+                string inputJSON = File.ReadAllText(filePath);
+
+                DocumentType docType = docTypeGroup.DocumentTypes.Find(DOCUMENT_TYPE);
+                if (docType == null)
+                {
+                    throw new Exception("Document type was not found");
+                }
+
+                FileType fType = app.Core.FileTypes.Find(FILE_TYPE);
+                if (fType == null)
+                {
+                    throw new Exception("File type was not found");
+                }
+                        
+                KeywordRecordType keywordRecordType = docType.KeywordRecordTypes[0];
+                        
+                IList<JToken> contents = JToken.Parse(inputJSON)["contents"].Children().ToList();
+
+                foreach (JToken jToken in contents)
+                {
+                    Content jContent = jToken.ToObject<Content>();
+
+                    string fileUploadPath = CONTENT_UPLOAD + "\\" + jContent.file;
+                    if (File.Exists(fileUploadPath))
+                    {
+                        Console.Out.WriteLine("Content upload file found: " + fileUploadPath);
+                        List<string> fileList = new List<string>();
+                        fileList.Add(fileUploadPath);
+
+                        StoreNewDocumentProperties storeDocumentProperties = app.Core.Storage.CreateStoreNewDocumentProperties(docType, fType);
+                        foreach (var kt in keywordRecordType.KeywordTypes)
+                        {
+                            if (jContent.keywords.ContainsKey(kt.Name))
+                            {
+                                storeDocumentProperties.AddKeyword(kt.CreateKeyword(jContent.keywords[kt.Name]));
+                            }
+                        }
+
+                        storeDocumentProperties.DocumentDate = DateTime.Now;
+                        storeDocumentProperties.Comment = "RSI OnBase Unity Application";
+                        storeDocumentProperties.Options = StoreDocumentOptions.SkipWorkflow;  
+
+                        Document newDocument = app.Core.Storage.StoreNewDocument(fileList, storeDocumentProperties);
+
+                        documentIdList.Add(newDocument.ID);
+                        Console.Out.WriteLine(string.Format("Document import was successful. New Document ID: {0}", newDocument.ID.ToString()));
+                    }
+                    else
+                    {
+                        Console.Out.WriteLine("Content upload file not found: " + fileUploadPath);
+                    }
+                }
+            }
+            else
+            {
+                Console.Out.WriteLine("Content upload config file not found: " + filePath);
+            }
+                                                               
+            Console.Out.WriteLine();
+        }
+
+        private static void DocumentLookup()
+        {
+            Console.Out.WriteLine("Attempting to find document...");
+
+            foreach (var docID in documentIdList)
+            {
+                Document document = app.Core.GetDocumentByID(docID);
+                if (document == null)
+                {
+                    throw new Exception("Document was not found");
+                }
+
+                Console.Out.WriteLine(string.Format("Document was retrieved successfully. Document Id: {0}", document.ID.ToString()));
+            }
+            Console.Out.WriteLine();
+        }
+        private static void ExecuteQuery()
+        {
+            Console.Out.WriteLine("Attempting to execute a document query...");
+
+            DocumentType documentType = app.Core.DocumentTypes.Find(DOCUMENT_TYPE);
+            if (documentType == null)
             {
                 throw new Exception("Document type was not found");
             }
 
-            FileType fType = app.Core.FileTypes.Find(FILE_TYPE);
-            if (fType == null)
+            DocumentQuery documentQuery = app.Core.CreateDocumentQuery();
+            documentQuery.AddDocumentType(documentType);
+
+            DocumentList docList = documentQuery.Execute(long.MaxValue);
+
+            Console.Out.WriteLine("Displaying first 10 documents returned.");
+            Console.Out.WriteLine();
+
+            int limit = (docList.Count < 10) ? docList.Count : 10;
+
+            for (int x = 0; x < limit; x++)
             {
-                throw new Exception("File type was not found");
+                Console.Out.WriteLine(string.Format("{0}. {1}", (x + 1).ToString(), docList[x].DateStored.ToShortDateString()));
+            }
+            Console.Out.WriteLine();
+        }
+        private static void DocumentQuery()
+        {
+            Console.Out.WriteLine("Attempting to execute a document query...");
+
+            DocumentType documentType = app.Core.DocumentTypes.Find(DOCUMENT_TYPE);
+            if (documentType == null)
+            {
+                throw new Exception("Document type was not found");
             }
 
-            StoreNewDocumentProperties storeDocumentProperties = app.Core.Storage.CreateStoreNewDocumentProperties(docType, fType);
-            KeywordRecordType keywordRecordType = docType.KeywordRecordTypes[0];
+            DocumentQuery documentQuery = app.Core.CreateDocumentQuery();
+            documentQuery.AddDisplayColumn(DisplayColumnType.DocumentDate);
+            documentQuery.AddDocumentType(documentType);
             
-            string inputJSON = File.ReadAllText(CONTENT_UPLOAD + "\\test.json");
-
-            IList<JToken> contents = JToken.Parse(inputJSON)["contents"].Children().ToList();  
-
-            foreach (JToken jToken in contents)
+            using (QueryResult queryResults = documentQuery.ExecuteQueryResults(10L))
             {
-                Content jContent = jToken.ToObject<Content>();                                 
+                Console.Out.WriteLine("Displaying first 10 documents returned.");
 
-                foreach (var kt in keywordRecordType.KeywordTypes)
+                foreach (QueryResultItem queryResultItem in queryResults.QueryResultItems)
                 {
-                    if (jContent.keywords.ContainsKey(kt.Name))
-                    {
-                        storeDocumentProperties.AddKeyword(kt.CreateKeyword(jContent.keywords[kt.Name]));
-                    }                                                                                  
+                    Console.Out.WriteLine(string.Format("Document ID {0} ({1} Display Column: {2})", queryResultItem.Document.ID.ToString(), queryResultItem.DisplayColumns.Count.ToString(), queryResultItem.DisplayColumns[0].Value.ToString()));
+                }
+            }
+            Console.Out.WriteLine();
+        }
+        private static void KeywordQuery()
+        {
+            Console.Out.WriteLine("Attempting to execute a Keyword query...");
+            string filePath = CONTENT_DOWNLOAD + "\\download.json";
+            if (File.Exists(filePath))
+            {
+                Console.Out.WriteLine("Content download config file found: " + filePath);
+                string inputJSON = File.ReadAllText(filePath);
+
+                DocumentType documentType = app.Core.DocumentTypes.Find(DOCUMENT_TYPE);
+                if (documentType == null)
+                {
+                    throw new Exception("Document type was not found");
                 }
 
-                storeDocumentProperties.DocumentDate = DateTime.Now;
-                storeDocumentProperties.Comment = "RSI OnBase Unity Application";
-                storeDocumentProperties.Options = StoreDocumentOptions.SkipWorkflow;
+                DocumentQuery documentQuery = app.Core.CreateDocumentQuery();
+                documentQuery.AddDisplayColumn(DisplayColumnType.DocumentDate);
+                documentQuery.AddDocumentType(documentType);
 
-                List<string> fileList = new List<string>();
-                fileList.Add(CONTENT_UPLOAD + "\\" + jContent.file);
+                KeywordRecordType keywordRecordType = documentType.KeywordRecordTypes[0];
+                IList<JToken> contents = JToken.Parse(inputJSON)["contents"].Children().ToList();
 
-                Document newDocument = app.Core.Storage.StoreNewDocument(fileList, storeDocumentProperties);
+                foreach (JToken jToken in contents)
+                {
+                    Content jContent = jToken.ToObject<Content>();
+                    foreach (var kt in keywordRecordType.KeywordTypes)
+                    {
+                        if (jContent.keywords.ContainsKey(kt.Name))
+                        {
+                            documentQuery.AddKeyword(kt.CreateKeyword(jContent.keywords[kt.Name]));
+                        }
+                    }      
 
-                Console.Out.WriteLine(string.Format("Document import was successful. New Document ID: {0}", newDocument.ID.ToString()));
-            }                                                                                                                           
-            
+                    using (QueryResult queryResults = documentQuery.ExecuteQueryResults(10L))
+                    {
+                        Console.Out.WriteLine("Displaying first 10 documents returned.");
+
+                        foreach (QueryResultItem queryResultItem in queryResults.QueryResultItems)
+                        {
+                            Console.Out.WriteLine(string.Format("Document ID {0} ({1} Display Column: {2})", queryResultItem.Document.ID.ToString(), queryResultItem.DisplayColumns.Count.ToString(), queryResultItem.DisplayColumns[0].Value.ToString()));
+                        }
+                    }
+                }
+            }
+            Console.Out.WriteLine();
+        }
+        private static void ExportDocument()
+        {
+            Console.Out.WriteLine("Attempting to export document...");
+
+            foreach (var docID in documentIdList)
+            {
+                Document document = app.Core.GetDocumentByID(docID);
+                if (document == null)
+                {
+                    throw new Exception("Document was not found");
+                }
+
+                using (DocumentLock documentLock = document.LockDocument())
+                {
+                    if (documentLock.Status != DocumentLockStatus.LockObtained)
+                    {
+                        throw new Exception("Failed to lock document");
+                    }
+
+                    DefaultDataProvider defaultDataProvider = app.Core.Retrieval.Default;
+
+                    using (PageData pageData = defaultDataProvider.GetDocument(document.DefaultRenditionOfLatestRevision))
+                    {
+                        using (Stream stream = pageData.Stream)
+                        {
+                            Utility.WriteStreamToFile(stream, string.Format(CONTENT_DOWNLOAD + @"\{0}.{1}", document.ID.ToString(), pageData.Extension));
+                        }
+                    }
+                }
+
+                Console.Out.WriteLine("Document export was successful.");
+            }
             Console.Out.WriteLine();
         }
 
@@ -204,6 +373,11 @@ namespace RSIOnBaseUnity
                     {
                         GetDocumentTypes();
                         ArchiveDocument();
+                        DocumentLookup();
+                        ExecuteQuery();
+                        DocumentQuery();
+                        KeywordQuery();
+                        ExportDocument();
                     }                     
                 }                    
             }
