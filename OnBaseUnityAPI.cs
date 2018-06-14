@@ -71,7 +71,7 @@ namespace RSIOnBaseUnity
                                     UnityBroker.ArchiveDocument(app, DOCUMENTS_DIRECTORY, docTypeGroup);
                                     break;
                                 case 5:
-                                    UnityBroker.Reindex(app, DOCUMENTS_DIRECTORY, docTypeGroup);
+                                    UnityBroker.Reindex(app, DOCUMENTS_DIRECTORY);
                                     break; 
                             }
 

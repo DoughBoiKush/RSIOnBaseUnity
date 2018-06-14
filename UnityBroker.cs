@@ -267,7 +267,7 @@ namespace RSIOnBaseUnity
 
             logger.Info("");
         }
-        public static void Reindex(Application app, string documentsDir, DocumentTypeGroup docTypeGroup)
+        public static void Reindex(Application app, string documentsDir)
         {
             logger.Info("Attempting to re-index document by updating a keyword...");
             string filePath = documentsDir + "\\reindex.json";
@@ -281,13 +281,6 @@ namespace RSIOnBaseUnity
                 foreach (JToken jToken in contents)
                 {
                     Content jContent = jToken.ToObject<Content>();
-
-                    DocumentType documentType = docTypeGroup.DocumentTypes.Find(jContent.documentType);
-                    if (documentType == null)
-                    {
-                        throw new Exception("Document type was not found");
-                    }                                       
-
                     long documentId = long.Parse(jContent.documentID);
                     Document document = app.Core.GetDocumentByID(documentId, DocumentRetrievalOptions.LoadKeywords);
                     if (document == null)
@@ -295,29 +288,24 @@ namespace RSIOnBaseUnity
                         throw new Exception("Document was not found");
                     }
 
-                    foreach (var kr in document.KeywordRecords)
+                    var keywords = document.KeywordRecords[0].Keywords.Where(x => jContent.keywords.Keys.Contains(x.KeywordType.Name));
+                    
+                    using (DocumentLock documentLock = document.LockDocument())
                     {
-                        foreach (var keyword in kr.Keywords)
+                        if (documentLock.Status != DocumentLockStatus.LockObtained)
                         {
-                            foreach (var inputKeyword in jContent.keywords)
-                            {
-                                if (keyword.KeywordType.Name.Equals(inputKeyword.Key))
-                                {                                                                                           
-                                    using (DocumentLock documentLock = document.LockDocument())
-                                    {
-                                        if (documentLock.Status != DocumentLockStatus.LockObtained)
-                                        {
-                                            throw new Exception("Failed to lock document");
-                                        }
-
-                                        KeywordModifier keyModifier = document.CreateKeywordModifier();                                                               
-                                        Keyword keywordToModify = keyword.KeywordType.CreateKeyword(inputKeyword.Value);                                                               
-                                        keyModifier.UpdateKeyword(keyword, keywordToModify);  
-                                        keyModifier.ApplyChanges();                           
-                                    }
-                                }
-                            }
+                            throw new Exception("Failed to lock document");
                         }
+
+                        KeywordModifier keyModifier = document.CreateKeywordModifier();
+
+                        foreach (var keyword in keywords)
+                        {
+                            Keyword keywordToModify = keyword.KeywordType.CreateKeyword(jContent.keywords[keyword.KeywordType.Name]);
+                            keyModifier.UpdateKeyword(keyword, keywordToModify);
+                        }
+
+                        keyModifier.ApplyChanges();
                     }
 
                     logger.Info(string.Format("Keyword was successfully updated. Document Id: {0}", jContent.documentID));
