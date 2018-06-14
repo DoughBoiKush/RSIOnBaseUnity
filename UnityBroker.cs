@@ -77,36 +77,27 @@ namespace RSIOnBaseUnity
 
             logger.Info("Connection closed.");
         }
-        public static DocumentTypeGroup GetDocumentTypeGroup(Application app, string documentTypeGroup)
+        
+        public static void GetConfigInfo(Application app)
         {
-            logger.Info("Attempting to Get Document Type Group: " + documentTypeGroup);
+            logger.Info("Attempting to Get Config Info");
 
-            DocumentTypeGroup docTypeGroup = app.Core.DocumentTypeGroups.Find(documentTypeGroup);
-
-            if (docTypeGroup == null)
+            foreach (var dtg in app.Core.DocumentTypeGroups)
             {
-                throw new Exception("Document Type Group not found: " + documentTypeGroup);
-            }
-
-            logger.Info("Document Type Group found: " + documentTypeGroup);
-            return docTypeGroup;
-        }
-        public static void GetConfigInfo(Application app, string documentTypeGroup, DocumentTypeGroup docTypeGroup)
-        {
-            logger.Info("Attempting to Get Document Types for Group: " + documentTypeGroup);
-
-            foreach (var dt in docTypeGroup.DocumentTypes)
-            {
-                logger.Info("Document Type: " + dt.Name + " (ID: " + dt.ID + ")");
-                foreach (var krt in dt.KeywordRecordTypes)
+                logger.Info("Document Type Group: " + dtg.Name + " (ID: " + dtg.ID + ")");
+                foreach (var dt in dtg.DocumentTypes)
                 {
-                    logger.Info("Keyword Types:");
-                    foreach (var kt in krt.KeywordTypes)
+                    logger.Info("Document Type: " + dt.Name + " (ID: " + dt.ID + ")");
+                    foreach (var krt in dt.KeywordRecordTypes)
                     {
-                        logger.Info(kt.Name + " (ID: " + kt.ID + ")");
+                        logger.Info("Keyword Types:");
+                        foreach (var kt in krt.KeywordTypes)
+                        {
+                            logger.Info(kt.Name + " (ID: " + kt.ID + ")");
+                        }
                     }
+                    logger.Info("");
                 }
-                logger.Info("");
             }
 
             logger.Info("Keyword Record Types:");
@@ -200,7 +191,7 @@ namespace RSIOnBaseUnity
             }
             logger.Info("");
         }
-        public static void ArchiveDocument(Application app, string documentsDir, DocumentTypeGroup docTypeGroup)
+        public static void ArchiveDocument(Application app, string documentsDir, string documentTypeGroup)
         {
             logger.Info("Attempting to archive documents...");
 
@@ -209,12 +200,19 @@ namespace RSIOnBaseUnity
             {
                 logger.Info("Archive config file found: " + filePath);    
                 string inputJSON = File.ReadAllText(filePath);
+                                                                               
+                logger.Info("Attempting to Get Document Type Group: " + documentTypeGroup);
+                DocumentTypeGroup docTypeGroup = app.Core.DocumentTypeGroups.Find(documentTypeGroup);
+                if (docTypeGroup == null)
+                {
+                    throw new Exception("Document Type Group not found: " + documentTypeGroup);
+                }
+                logger.Info("Document Type Group found: " + documentTypeGroup);
 
                 IList<JToken> jTokens = JToken.Parse(inputJSON)["contents"].Children().ToList();  
                 foreach (JToken jToken in jTokens)
                 {
-                    Content content = jToken.ToObject<Content>();
-
+                    Content content = jToken.ToObject<Content>();      
                     DocumentType docType = docTypeGroup.DocumentTypes.Find(content.documentType);
                     if (docType == null)
                     {
