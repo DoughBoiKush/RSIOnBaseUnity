@@ -83,15 +83,15 @@ namespace RSIOnBaseUnity
             }
             catch (WebException ex)
             {
-                logger.Info("General network error: " + ex.Message);
+                logger.Error("General network error: " + ex.Message);
             }
             catch (UnityAPIException ex)
             {
-                logger.Info("General Unity API error: " + ex.Message);
+                logger.Error("General Unity API error: " + ex.Message);
             }
             catch (Exception ex)
             {
-                logger.Info("General error: " + ex.Message);
+                logger.Error("General error: " + ex.Message);
             }
             finally
             {

@@ -29,27 +29,27 @@ namespace RSIOnBaseUnity
             }
             catch (MaxLicensesException)
             {
-                logger.Info("Error: All available licenses have been consumed.");
+                logger.Error("Error: All available licenses have been consumed.");
             }
             catch (SystemLockedOutException)
             {
-                logger.Info("Error: The system is currently in lockout mode.");
+                logger.Error("Error: The system is currently in lockout mode.");
             }
             catch (InvalidLoginException)
             {
-                logger.Info("Error: Invalid Login Credentials.");
+                logger.Error("Error: Invalid Login Credentials.");
             }
             catch (AuthenticationFailedException)
             {
-                logger.Info("Error: NT Authentication Failed.");
+                logger.Error("Error: NT Authentication Failed.");
             }
             catch (MaxConcurrentLicensesException)
             {
-                logger.Info("Error: All concurrent licenses for this user group have been consumed.");
+                logger.Error("Error: All concurrent licenses for this user group have been consumed.");
             }
             catch (InvalidLicensingException)
             {
-                logger.Info("Error: Invalid Licensing.");
+                logger.Error("Error: Invalid Licensing.");
             }
 
             if (app != null)
@@ -68,7 +68,7 @@ namespace RSIOnBaseUnity
             }
             catch (SessionNotFoundException)
             {
-                logger.Info("Error: Active session could not be found.");
+                logger.Error("Error: Active session could not be found.");
             }
             finally
             {
@@ -125,12 +125,12 @@ namespace RSIOnBaseUnity
                 logger.Info("Query File found: " + filePath);
                 string inputJSON = File.ReadAllText(filePath);
 
-                IList<JToken> contents = JToken.Parse(inputJSON)["contents"].Children().ToList();
-                foreach (JToken jToken in contents)
+                IList<JToken> jTokens = JToken.Parse(inputJSON)["contents"].Children().ToList();
+                foreach (JToken jToken in jTokens)
                 {
-                    Content jContent = jToken.ToObject<Content>();
+                    Content content = jToken.ToObject<Content>();
 
-                    DocumentType documentType = app.Core.DocumentTypes.Find(jContent.documentType);
+                    DocumentType documentType = app.Core.DocumentTypes.Find(content.documentType);
 
                     if (documentType == null)
                     {
@@ -145,9 +145,9 @@ namespace RSIOnBaseUnity
                     
                     foreach (var kt in keywordRecordType.KeywordTypes)
                     {
-                        if (jContent.keywords.ContainsKey(kt.Name))
+                        if (content.keywords.ContainsKey(kt.Name))
                         {
-                            documentQuery.AddKeyword(kt.CreateKeyword(jContent.keywords[kt.Name]));
+                            documentQuery.AddKeyword(kt.CreateKeyword(content.keywords[kt.Name]));
                         }
                     }
 
@@ -210,19 +210,18 @@ namespace RSIOnBaseUnity
                 logger.Info("Archive config file found: " + filePath);    
                 string inputJSON = File.ReadAllText(filePath);
 
-                IList<JToken> contents = JToken.Parse(inputJSON)["contents"].Children().ToList(); 
-
-                foreach (JToken jToken in contents)
+                IList<JToken> jTokens = JToken.Parse(inputJSON)["contents"].Children().ToList();  
+                foreach (JToken jToken in jTokens)
                 {
-                    Content jContent = jToken.ToObject<Content>();
+                    Content content = jToken.ToObject<Content>();
 
-                    DocumentType docType = docTypeGroup.DocumentTypes.Find(jContent.documentType);
+                    DocumentType docType = docTypeGroup.DocumentTypes.Find(content.documentType);
                     if (docType == null)
                     {
                         throw new Exception("Document type was not found");
                     }
 
-                    FileType fType = app.Core.FileTypes.Find(jContent.fileTypes[0]);
+                    FileType fType = app.Core.FileTypes.Find(content.fileTypes[0]);
                     if (fType == null)
                     {
                         throw new Exception("File type was not found");
@@ -230,7 +229,7 @@ namespace RSIOnBaseUnity
 
                     KeywordRecordType keywordRecordType = docType.KeywordRecordTypes[0];  
                                
-                    string fileUploadPath = documentsDir + "\\" + jContent.file;
+                    string fileUploadPath = documentsDir + "\\" + content.file;
                     if (File.Exists(fileUploadPath))
                     {
                         logger.Info("Archive document found: " + fileUploadPath);
@@ -240,9 +239,9 @@ namespace RSIOnBaseUnity
                         StoreNewDocumentProperties storeDocumentProperties = app.Core.Storage.CreateStoreNewDocumentProperties(docType, fType);
                         foreach (var kt in keywordRecordType.KeywordTypes)
                         {
-                            if (jContent.keywords.ContainsKey(kt.Name))
+                            if (content.keywords.ContainsKey(kt.Name))
                             {
-                                storeDocumentProperties.AddKeyword(kt.CreateKeyword(jContent.keywords[kt.Name]));
+                                storeDocumentProperties.AddKeyword(kt.CreateKeyword(content.keywords[kt.Name]));
                             }
                         }
 
@@ -276,19 +275,18 @@ namespace RSIOnBaseUnity
                 logger.Info("Archive config file found: " + filePath);
                 string inputJSON = File.ReadAllText(filePath);
 
-                IList<JToken> contents = JToken.Parse(inputJSON)["contents"].Children().ToList();
-
-                foreach (JToken jToken in contents)
+                IList<JToken> jTokens = JToken.Parse(inputJSON)["contents"].Children().ToList(); 
+                foreach (JToken jToken in jTokens)
                 {
-                    Content jContent = jToken.ToObject<Content>();
-                    long documentId = long.Parse(jContent.documentID);
+                    Content content = jToken.ToObject<Content>();
+                    long documentId = long.Parse(content.documentID);
                     Document document = app.Core.GetDocumentByID(documentId, DocumentRetrievalOptions.LoadKeywords);
                     if (document == null)
                     {
                         throw new Exception("Document was not found");
                     }
 
-                    var keywords = document.KeywordRecords[0].Keywords.Where(x => jContent.keywords.Keys.Contains(x.KeywordType.Name));
+                    var keywords = document.KeywordRecords[0].Keywords.Where(x => content.keywords.Keys.Contains(x.KeywordType.Name));
                     
                     using (DocumentLock documentLock = document.LockDocument())
                     {
@@ -301,14 +299,14 @@ namespace RSIOnBaseUnity
 
                         foreach (var keyword in keywords)
                         {
-                            Keyword keywordToModify = keyword.KeywordType.CreateKeyword(jContent.keywords[keyword.KeywordType.Name]);
+                            Keyword keywordToModify = keyword.KeywordType.CreateKeyword(content.keywords[keyword.KeywordType.Name]);
                             keyModifier.UpdateKeyword(keyword, keywordToModify);
                         }
 
                         keyModifier.ApplyChanges();
                     }
 
-                    logger.Info(string.Format("Keyword was successfully updated. Document Id: {0}", jContent.documentID));
+                    logger.Info(string.Format("Keyword was successfully updated. Document Id: {0}", content.documentID));
                 }
             }
 
