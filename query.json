@@ -1,0 +1,11 @@
+{
+	'contents': [{	
+		'documentType': 'RETURN - RETURN',	
+		'documentTypeGroup': 'RSI Documents',	
+		'fileTypes':[ 'PDF', 'TIFF' ],
+		'keywords': {
+			'DLN': '061220181',
+			'Content Type': 'RETURN'
+		}
+	}]
+}
