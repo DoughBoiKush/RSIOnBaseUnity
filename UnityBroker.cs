@@ -18,14 +18,21 @@ namespace RSIOnBaseUnity
         {
             Application app = null;
 
-            AuthenticationProperties authProps = Application.CreateOnBaseAuthenticationProperties(url, username, password, datasource);
-            authProps.LicenseType = LicenseType.Default;
-
-            logger.Info("Attempting to make a connection...");
-
             try
             {
-                app = Application.Connect(authProps);
+                if (String.IsNullOrEmpty(username) && String.IsNullOrEmpty(password))
+                {
+                    DomainAuthenticationProperties authProps = Application.CreateDomainAuthenticationProperties(url, datasource);
+                    logger.Info("Attempting to make a Domain connection...");
+                    app = Application.Connect(authProps);
+                }
+                else
+                {
+                    AuthenticationProperties authProps = Application.CreateOnBaseAuthenticationProperties(url, username, password, datasource);
+                    authProps.LicenseType = LicenseType.Default;
+                    logger.Info("Attempting to make a OnBase User connection...");
+                    app = Application.Connect(authProps);
+                }                                                 
             }
             catch (MaxLicensesException)
             {
@@ -99,11 +106,17 @@ namespace RSIOnBaseUnity
                     logger.Info("");
                 }
             }
-
+                              
             logger.Info("Keyword Record Types:");
             foreach (var krt in app.Core.KeywordRecordTypes)
             {
                 logger.Info(krt.Name);
+            }
+
+            logger.Info("File Types:");
+            foreach (var ft in app.Core.FileTypes)
+            {
+                logger.Info(ft.Name);
             }
         }
         public static List<long> QueryDocuments(Application app, string documentsDir)
@@ -197,73 +210,83 @@ namespace RSIOnBaseUnity
         public static void ArchiveDocument(Application app, string documentsDir, string documentTypeGroup)
         {
             logger.Info("Attempting to archive documents...");
-
-            string filePath = documentsDir + "\\archive.json";
-            if (File.Exists(filePath))
+            try
             {
-                logger.Info("Archive config file found: " + filePath);    
-                string inputJSON = File.ReadAllText(filePath);
-                                                                               
-                logger.Info("Attempting to Get Document Type Group: " + documentTypeGroup);
-                DocumentTypeGroup docTypeGroup = app.Core.DocumentTypeGroups.Find(documentTypeGroup);
-                if (docTypeGroup == null)
+
+                string filePath = documentsDir + "\\archive.json";
+                if (File.Exists(filePath))
                 {
-                    throw new Exception("Document Type Group not found: " + documentTypeGroup);
-                }
-                logger.Info("Document Type Group found: " + documentTypeGroup);
+                    logger.Info("Archive config file found: " + filePath);
+                    string inputJSON = File.ReadAllText(filePath);
 
-                IList<JToken> jTokens = JToken.Parse(inputJSON)["contents"].Children().ToList();  
-                foreach (JToken jToken in jTokens)
-                {
-                    Content content = jToken.ToObject<Content>();      
-                    DocumentType docType = docTypeGroup.DocumentTypes.Find(content.documentType);
-                    if (docType == null)
+                    logger.Info("Attempting to Get Document Type Group: " + documentTypeGroup);
+                    DocumentTypeGroup docTypeGroup = app.Core.DocumentTypeGroups.Find(documentTypeGroup);
+                    if (docTypeGroup == null)
                     {
-                        throw new Exception("Document type was not found");
+                        throw new Exception("Document Type Group not found: " + documentTypeGroup);
                     }
+                    logger.Info("Document Type Group found: " + documentTypeGroup);
 
-                    FileType fType = app.Core.FileTypes.Find(content.fileTypes[0]);
-                    if (fType == null)
+                    IList<JToken> jTokens = JToken.Parse(inputJSON)["contents"].Children().ToList();
+                    foreach (JToken jToken in jTokens)
                     {
-                        throw new Exception("File type was not found");
-                    }
-
-                    KeywordRecordType keywordRecordType = docType.KeywordRecordTypes[0];  
-                               
-                    string fileUploadPath = documentsDir + "\\" + content.file;
-                    if (File.Exists(fileUploadPath))
-                    {
-                        logger.Info("Archive document found: " + fileUploadPath);
-                        List<string> fileList = new List<string>();
-                        fileList.Add(fileUploadPath);
-
-                        StoreNewDocumentProperties storeDocumentProperties = app.Core.Storage.CreateStoreNewDocumentProperties(docType, fType);
-                        foreach (var kt in keywordRecordType.KeywordTypes)
+                        Content content = jToken.ToObject<Content>();
+                        logger.Info("Attempting to Get Document Type: " + content.documentType);
+                        DocumentType docType = docTypeGroup.DocumentTypes.Find(content.documentType);
+                        if (docType == null)
                         {
-                            if (content.keywords.ContainsKey(kt.Name))
-                            {
-                                storeDocumentProperties.AddKeyword(kt.CreateKeyword(content.keywords[kt.Name]));
-                            }
+                            throw new Exception("Document type was not found");
                         }
 
-                        storeDocumentProperties.DocumentDate = DateTime.Now;
-                        storeDocumentProperties.Comment = "RSI OnBase Unity Application";
-                        storeDocumentProperties.Options = StoreDocumentOptions.SkipWorkflow;
+                        logger.Info("Attempting to Get File Type: " + content.fileTypes[0]);
+                        FileType fType = app.Core.FileTypes.Find(content.fileTypes[0]);
+                        if (fType == null)
+                        {
+                            throw new Exception("File type was not found");
+                        }
 
-                        Document newDocument = app.Core.Storage.StoreNewDocument(fileList, storeDocumentProperties);
-                                                                    
-                        logger.Info(string.Format("Document import was successful. New Document ID: {0}", newDocument.ID.ToString()));
-                    }
-                    else
-                    {
-                        logger.Info("Archive document file not found: " + fileUploadPath);
+                        KeywordRecordType keywordRecordType = docType.KeywordRecordTypes[0];
+
+                        string fileUploadPath = documentsDir + "\\" + content.file;
+                        if (File.Exists(fileUploadPath))
+                        {
+                            logger.Info("Archive document found: " + fileUploadPath);
+                            List<string> fileList = new List<string>();
+                            fileList.Add(fileUploadPath);
+
+                            StoreNewDocumentProperties storeDocumentProperties = app.Core.Storage.CreateStoreNewDocumentProperties(docType, fType);
+                            foreach (var kt in keywordRecordType.KeywordTypes)
+                            {
+                                if (content.keywords.ContainsKey(kt.Name))
+                                {
+                                    logger.Info("Add Keywords: " + content.keywords[kt.Name]);
+                                    storeDocumentProperties.AddKeyword(kt.CreateKeyword(content.keywords[kt.Name]));
+                                }
+                            }
+
+                            storeDocumentProperties.DocumentDate = DateTime.Now;
+                            storeDocumentProperties.Comment = "RSI OnBase Unity Application";
+                            storeDocumentProperties.Options = StoreDocumentOptions.SkipWorkflow;
+
+                            Document newDocument = app.Core.Storage.StoreNewDocument(fileList, storeDocumentProperties);
+
+                            logger.Info(string.Format("Document import was successful. New Document ID: {0}", newDocument.ID.ToString()));
+                        }
+                        else
+                        {
+                            logger.Info("Archive document file not found: " + fileUploadPath);
+                        }
                     }
                 }
+                else
+                {
+                    logger.Info("Archive config file not found: " + filePath);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                logger.Info("Archive config file not found: " + filePath);
-            }
+                logger.Error(ex.Message, ex);
+            }                                
 
             logger.Info("");
         }
