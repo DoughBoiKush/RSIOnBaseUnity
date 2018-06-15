@@ -129,7 +129,9 @@ namespace RSIOnBaseUnity
                     }
 
                     DocumentQuery documentQuery = app.Core.CreateDocumentQuery();
+                    documentQuery.AddDisplayColumn(DisplayColumnType.AuthorName);
                     documentQuery.AddDisplayColumn(DisplayColumnType.DocumentDate);
+                    documentQuery.AddDisplayColumn(DisplayColumnType.ArchivalDate);
                     documentQuery.AddDocumentType(documentType);
 
                     KeywordRecordType keywordRecordType = documentType.KeywordRecordTypes[0];
@@ -149,7 +151,8 @@ namespace RSIOnBaseUnity
                         foreach (QueryResultItem queryResultItem in queryResults.QueryResultItems)
                         {
                             documentIdList.Add(queryResultItem.Document.ID);
-                            logger.Info(string.Format("Document ID {0} ({1} Display Column: {2})", queryResultItem.Document.ID.ToString(), queryResultItem.DisplayColumns.Count.ToString(), queryResultItem.DisplayColumns[0].Value.ToString()));
+                            logger.Info(string.Format("Document ID {0}", queryResultItem.Document.ID.ToString()));
+                            logger.Info(string.Format("Author: {0} Document Date: {1} Archival Date: {2}", queryResultItem.DisplayColumns[0].Value.ToString(), DateTime.Parse(queryResultItem.DisplayColumns[1].Value.ToString()).ToShortDateString(), DateTime.Parse(queryResultItem.DisplayColumns[2].Value.ToString()).ToShortDateString()));
                         }
                     }
                 }
@@ -270,7 +273,7 @@ namespace RSIOnBaseUnity
             string filePath = documentsDir + "\\reindex.json";
             if (File.Exists(filePath))
             {
-                logger.Info("Archive config file found: " + filePath);
+                logger.Info("Re-index config file found: " + filePath);
                 string inputJSON = File.ReadAllText(filePath);
 
                 IList<JToken> jTokens = JToken.Parse(inputJSON)["contents"].Children().ToList(); 
