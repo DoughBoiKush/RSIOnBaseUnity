@@ -100,7 +100,7 @@ namespace RSIOnBaseUnity
                         logger.Info("Keyword Types:");
                         foreach (var kt in krt.KeywordTypes)
                         {
-                            logger.Info(kt.Name + " (ID: " + kt.ID + ")");
+                            logger.Info(kt.Name + " (ID: " + kt.ID + " Type: " + kt.DataType.ToString()  + ")");
                         }
                     }
                     logger.Info("");
@@ -159,8 +159,7 @@ namespace RSIOnBaseUnity
 
                     using (QueryResult queryResults = documentQuery.ExecuteQueryResults(long.MaxValue))
                     {
-                        logger.Info("Documents returned:");
-
+                        logger.Info("Number of Documents Found: " + queryResults.QueryResultItems.Count().ToString());  
                         foreach (QueryResultItem queryResultItem in queryResults.QueryResultItems)
                         {
                             documentIdList.Add(queryResultItem.Document.ID);
@@ -211,8 +210,7 @@ namespace RSIOnBaseUnity
         {
             logger.Info("Attempting to archive documents...");
             try
-            {
-
+            {                                       
                 string filePath = documentsDir + "\\archive.json";
                 if (File.Exists(filePath))
                 {
@@ -259,8 +257,29 @@ namespace RSIOnBaseUnity
                             {
                                 if (content.keywords.ContainsKey(kt.Name))
                                 {
-                                    logger.Info("Add Keywords: " + content.keywords[kt.Name]);
-                                    storeDocumentProperties.AddKeyword(kt.CreateKeyword(content.keywords[kt.Name]));
+                                    logger.Info("Add Keyword: " + content.keywords[kt.Name]);
+
+                                    switch (kt.DataType)
+                                    {
+                                        case KeywordDataType.AlphaNumeric:
+                                            storeDocumentProperties.AddKeyword(kt.CreateKeyword(content.keywords[kt.Name]));
+                                            break;
+                                        case KeywordDataType.Currency:
+                                        case KeywordDataType.SpecificCurrency:
+                                        case KeywordDataType.Numeric20:
+                                            storeDocumentProperties.AddKeyword(kt.CreateKeyword(decimal.Parse(content.keywords[kt.Name])));
+                                            break;
+                                        case KeywordDataType.Date:
+                                        case KeywordDataType.DateTime:                     
+                                            storeDocumentProperties.AddKeyword(kt.CreateKeyword(DateTime.Parse(content.keywords[kt.Name])));
+                                            break;
+                                        case KeywordDataType.FloatingPoint:                        
+                                            storeDocumentProperties.AddKeyword(kt.CreateKeyword(double.Parse(content.keywords[kt.Name])));
+                                            break;     
+                                        case KeywordDataType.Numeric9:                 
+                                            storeDocumentProperties.AddKeyword(kt.CreateKeyword(long.Parse(content.keywords[kt.Name])));
+                                            break;
+                                    }                                     
                                 }
                             }
 
@@ -293,45 +312,78 @@ namespace RSIOnBaseUnity
         public static void Reindex(Application app, string documentsDir)
         {
             logger.Info("Attempting to re-index document by updating a keyword...");
-            string filePath = documentsDir + "\\reindex.json";
-            if (File.Exists(filePath))
+            try
             {
-                logger.Info("Re-index config file found: " + filePath);
-                string inputJSON = File.ReadAllText(filePath);
-
-                IList<JToken> jTokens = JToken.Parse(inputJSON)["contents"].Children().ToList(); 
-                foreach (JToken jToken in jTokens)
+                string filePath = documentsDir + "\\reindex.json";
+                if (File.Exists(filePath))
                 {
-                    Content content = jToken.ToObject<Content>();
-                    long documentId = long.Parse(content.documentID);
-                    Document document = app.Core.GetDocumentByID(documentId, DocumentRetrievalOptions.LoadKeywords);
-                    if (document == null)
-                    {
-                        throw new Exception("Document was not found");
-                    }
+                    logger.Info("Re-index config file found: " + filePath);
+                    string inputJSON = File.ReadAllText(filePath);
 
-                    var keywords = document.KeywordRecords[0].Keywords.Where(x => content.keywords.Keys.Contains(x.KeywordType.Name));
+                    IList<JToken> jTokens = JToken.Parse(inputJSON)["contents"].Children().ToList(); 
+                    foreach (JToken jToken in jTokens)
+                    {
+                        Content content = jToken.ToObject<Content>();
+
+                        logger.Info("Attempting to Get Document ID: " + content.documentID);
+                        long documentId = long.Parse(content.documentID);
+                        Document document = app.Core.GetDocumentByID(documentId, DocumentRetrievalOptions.LoadKeywords);
+                        if (document == null)
+                        {
+                            throw new Exception("Document was not found");
+                        }
+
+                        var keywords = document.KeywordRecords[0].Keywords.Where(x => content.keywords.Keys.Contains(x.KeywordType.Name));
                     
-                    using (DocumentLock documentLock = document.LockDocument())
-                    {
-                        if (documentLock.Status != DocumentLockStatus.LockObtained)
+                        using (DocumentLock documentLock = document.LockDocument())
                         {
-                            throw new Exception("Failed to lock document");
+                            if (documentLock.Status != DocumentLockStatus.LockObtained)
+                            {
+                                throw new Exception("Failed to lock document");
+                            }
+
+                            KeywordModifier keyModifier = document.CreateKeywordModifier();
+
+                            foreach (var keyword in keywords)
+                            {
+                                logger.Info("Update Keyword: " + content.keywords[keyword.KeywordType.Name]);
+                                Keyword keywordToModify = null;
+
+                                switch (keyword.KeywordType.DataType)
+                                {
+                                    case KeywordDataType.AlphaNumeric:
+                                        keywordToModify = keyword.KeywordType.CreateKeyword(content.keywords[keyword.KeywordType.Name]);
+                                        break;
+                                    case KeywordDataType.Currency:
+                                    case KeywordDataType.SpecificCurrency:
+                                    case KeywordDataType.Numeric20:
+                                        keywordToModify = keyword.KeywordType.CreateKeyword(decimal.Parse(content.keywords[keyword.KeywordType.Name]));
+                                        break;
+                                    case KeywordDataType.Date:
+                                    case KeywordDataType.DateTime:
+                                        keywordToModify = keyword.KeywordType.CreateKeyword(DateTime.Parse(content.keywords[keyword.KeywordType.Name]));
+                                        break;
+                                    case KeywordDataType.FloatingPoint:
+                                        keywordToModify = keyword.KeywordType.CreateKeyword(double.Parse(content.keywords[keyword.KeywordType.Name]));
+                                        break;
+                                    case KeywordDataType.Numeric9:
+                                        keywordToModify = keyword.KeywordType.CreateKeyword(long.Parse(content.keywords[keyword.KeywordType.Name]));
+                                        break;
+                                }
+                                                                                                                                           
+                                keyModifier.UpdateKeyword(keyword, keywordToModify);
+                            }
+
+                            keyModifier.ApplyChanges();
                         }
 
-                        KeywordModifier keyModifier = document.CreateKeywordModifier();
-
-                        foreach (var keyword in keywords)
-                        {
-                            Keyword keywordToModify = keyword.KeywordType.CreateKeyword(content.keywords[keyword.KeywordType.Name]);
-                            keyModifier.UpdateKeyword(keyword, keywordToModify);
-                        }
-
-                        keyModifier.ApplyChanges();
+                        logger.Info(string.Format("Keyword was successfully updated. Document Id: {0}", content.documentID));
                     }
-
-                    logger.Info(string.Format("Keyword was successfully updated. Document Id: {0}", content.documentID));
                 }
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message, ex);
             }
 
             logger.Info("");
