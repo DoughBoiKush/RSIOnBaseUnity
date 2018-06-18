@@ -191,18 +191,19 @@ namespace RSIOnBaseUnity
                     }
 
                     using (QueryResult queryResults = documentQuery.ExecuteQueryResults(long.MaxValue))
-                    {
-                        logger.Info("Number of Documents Found: " + queryResults.QueryResultItems.Count().ToString());  
+                    {                   
+                        logger.Info("Number of " + content.documentType + " Documents Found: " + queryResults.QueryResultItems.Count().ToString());  
                         foreach (QueryResultItem queryResultItem in queryResults.QueryResultItems)
                         {
                             documentIdList.Add(queryResultItem.Document.ID);
-                            logger.Info(string.Format("Document ID {0}", queryResultItem.Document.ID.ToString()));
-                            logger.Info(string.Format("Author: {0} Document Date: {1} Archival Date: {2}", queryResultItem.DisplayColumns[0].Value.ToString(), DateTime.Parse(queryResultItem.DisplayColumns[1].Value.ToString()).ToShortDateString(), DateTime.Parse(queryResultItem.DisplayColumns[2].Value.ToString()).ToShortDateString()));
+                            logger.Info(string.Format("Document ID: {0}", queryResultItem.Document.ID.ToString()));
+                            logger.Info(string.Format("Author: {0}, Document Date: {1}, Archival Date: {2}", queryResultItem.DisplayColumns[0].Value.ToString(), DateTime.Parse(queryResultItem.DisplayColumns[1].Value.ToString()).ToShortDateString(), DateTime.Parse(queryResultItem.DisplayColumns[2].Value.ToString()).ToShortDateString()));
 
                             foreach (var keyword in queryResultItem.Document.KeywordRecords[0].Keywords)
                             {
                                 logger.Info(keyword.KeywordType.Name + " : " + keyword.Value.ToString());
-                            }                                                                            
+                            }
+                            logger.Info("");
                         }
                     }
                 }
@@ -267,6 +268,7 @@ namespace RSIOnBaseUnity
                     foreach (JToken jToken in jTokens)
                     {
                         Content content = jToken.ToObject<Content>();
+                        logger.Info("");
                         logger.Info("Attempting to Get Document Type: " + content.documentType);
                         DocumentType docType = docTypeGroup.DocumentTypes.Find(content.documentType);
                         if (docType == null)
@@ -295,7 +297,7 @@ namespace RSIOnBaseUnity
                             {
                                 if (content.keywords.ContainsKey(kt.Name))
                                 {
-                                    logger.Info("Add Keyword: " + content.keywords[kt.Name]);
+                                    logger.Info("Add Keyword: " + kt.Name + " = " + content.keywords[kt.Name]);
 
                                     switch (kt.DataType)
                                     {
@@ -327,7 +329,7 @@ namespace RSIOnBaseUnity
 
                             Document newDocument = app.Core.Storage.StoreNewDocument(fileList, storeDocumentProperties);
 
-                            logger.Info(string.Format("Document import was successful. New Document ID: {0}", newDocument.ID.ToString()));
+                            logger.Info(string.Format("Document Archive was successful. New Document ID: {0}", newDocument.ID.ToString()));
                         }
                         else
                         {
