@@ -85,39 +85,72 @@ namespace RSIOnBaseUnity
             logger.Info("Connection closed.");
         }
         
-        public static void GetConfigInfo(Application app)
+        public static void GetConfigInfo(Application app, string documentsDir)
         {
             logger.Info("Attempting to Get Config Info");
 
+            List<RSIDocumentTypeGroup> rsiDTGs = new List<RSIDocumentTypeGroup>();
             foreach (var dtg in app.Core.DocumentTypeGroups)
             {
                 logger.Info("Document Type Group: " + dtg.Name + " (ID: " + dtg.ID + ")");
+                RSIDocumentTypeGroup rsiDTG = new RSIDocumentTypeGroup();
+                rsiDTG.ID = dtg.ID.ToString();
+                rsiDTG.Name = dtg.Name;              
+                List<RSIDocumentType> rsiDocTypes = new List<RSIDocumentType>();
+
                 foreach (var dt in dtg.DocumentTypes)
                 {
                     logger.Info("Document Type: " + dt.Name + " (ID: " + dt.ID + ")");
+                    RSIDocumentType rsiDT = new RSIDocumentType();
+                    rsiDT.ID = dt.ID.ToString();
+                    rsiDT.Name = dt.Name;            
+                    List<RSIKeywordType> rsiKeyTypes = new List<RSIKeywordType>();
+
                     foreach (var krt in dt.KeywordRecordTypes)
                     {
                         logger.Info("Keyword Types:");
                         foreach (var kt in krt.KeywordTypes)
-                        {
+                        {   
                             logger.Info(kt.Name + " (ID: " + kt.ID + " Type: " + kt.DataType.ToString()  + ")");
+                            RSIKeywordType rsiKeywordType = new RSIKeywordType();
+                            rsiKeywordType.ID = kt.ID.ToString();
+                            rsiKeywordType.Name = kt.Name;
+                            rsiKeywordType.Type = kt.DataType.ToString();
+                            rsiKeywordType.Required = kt.FullFieldRequired.ToString();
+                            rsiKeyTypes.Add(rsiKeywordType);
                         }
                     }
+                    rsiDT.KeywordTypes = rsiKeyTypes;
+                    rsiDocTypes.Add(rsiDT);          
                     logger.Info("");
                 }
+
+                rsiDTG.DocumentTypes = rsiDocTypes;
+                rsiDTGs.Add(rsiDTG);
             }
-                              
+
+            JArray jArray = (JArray)JToken.FromObject(rsiDTGs);
+            string filePath = documentsDir + "\\config.json";
+            using (StreamWriter file = File.CreateText(filePath))
+            using (JsonTextWriter writer = new JsonTextWriter(file))
+            {
+                jArray.WriteTo(writer);
+            }
+
             logger.Info("Keyword Record Types:");
             foreach (var krt in app.Core.KeywordRecordTypes)
             {
                 logger.Info(krt.Name);
             }
 
+            logger.Info("");
             logger.Info("File Types:");
             foreach (var ft in app.Core.FileTypes)
             {
                 logger.Info(ft.Name);
             }
+
+
         }
         public static List<long> QueryDocuments(Application app, string documentsDir)
         {
@@ -165,6 +198,11 @@ namespace RSIOnBaseUnity
                             documentIdList.Add(queryResultItem.Document.ID);
                             logger.Info(string.Format("Document ID {0}", queryResultItem.Document.ID.ToString()));
                             logger.Info(string.Format("Author: {0} Document Date: {1} Archival Date: {2}", queryResultItem.DisplayColumns[0].Value.ToString(), DateTime.Parse(queryResultItem.DisplayColumns[1].Value.ToString()).ToShortDateString(), DateTime.Parse(queryResultItem.DisplayColumns[2].Value.ToString()).ToShortDateString()));
+
+                            foreach (var keyword in queryResultItem.Document.KeywordRecords[0].Keywords)
+                            {
+                                logger.Info(keyword.KeywordType.Name + " : " + keyword.Value.ToString());
+                            }                                                                            
                         }
                     }
                 }

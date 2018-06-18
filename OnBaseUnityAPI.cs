@@ -55,7 +55,7 @@ namespace RSIOnBaseUnity
                             case 0:
                                 break;
                             case 1:
-                                UnityBroker.GetConfigInfo(app);
+                                UnityBroker.GetConfigInfo(app, DOCUMENTS_DIRECTORY);
                                 break;
                             case 2:
                                 documentIdList = UnityBroker.QueryDocuments(app, DOCUMENTS_DIRECTORY);
