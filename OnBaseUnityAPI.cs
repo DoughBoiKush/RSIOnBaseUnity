@@ -17,6 +17,7 @@ namespace RSIOnBaseUnity
         private static string APP_SERVER_URL = System.Configuration.ConfigurationManager.AppSettings["appServerURL"].ToString();
         private static string USERNAME = System.Configuration.ConfigurationManager.AppSettings["username"].ToString();
         private static string PASSWORD = System.Configuration.ConfigurationManager.AppSettings["password"].ToString();
+        private static string domain = System.Configuration.ConfigurationManager.AppSettings["domain"].ToString();
         private static string DATA_SOURCE = System.Configuration.ConfigurationManager.AppSettings["dataSource"].ToString();
 
         private static string DOCUMENT_TYPE_GROUP = System.Configuration.ConfigurationManager.AppSettings["documentTypeGroup"].ToString();
@@ -31,7 +32,7 @@ namespace RSIOnBaseUnity
 
             try
             {
-                app = UnityBroker.Connect(APP_SERVER_URL, USERNAME, PASSWORD, DATA_SOURCE);
+                app = UnityBroker.Connect(APP_SERVER_URL, USERNAME, PASSWORD, DATA_SOURCE, domain);
                 if (app != null)
                 {            
                     string usage = "\n----------------------------------------------------- \n" +

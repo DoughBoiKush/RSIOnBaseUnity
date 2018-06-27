@@ -7,6 +7,7 @@ using Hyland.Unity;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using log4net;
+using System.Net.Http;
 
 namespace RSIOnBaseUnity
 {
@@ -14,16 +15,37 @@ namespace RSIOnBaseUnity
     {
         private static readonly ILog logger = LogManager.GetLogger(typeof(UnityBroker));
 
-        public static Application Connect(string url, string username, string password, string datasource)
+        public static Application Connect(string url, string username, string password, string datasource, string domain)
         {
             Application app = null;
 
             try
             {
-                if (String.IsNullOrEmpty(username) && String.IsNullOrEmpty(password))
+                if (!String.IsNullOrEmpty(domain) && !String.IsNullOrEmpty(username) && !String.IsNullOrEmpty(password))
                 {
                     DomainAuthenticationProperties authProps = Application.CreateDomainAuthenticationProperties(url, datasource);
-                    logger.Info("Attempting to make a Domain connection...");
+                    logger.Info("Impersonation : " + domain + " " + username + " " + password);
+                    using (new Impersonation(domain, username, password))
+                    {
+                        string userName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
+                        logger.Info("Attempting to make a Domain connection using Principal.WindowsIdentity.GetCurrent().Name: " + userName);
+
+                        string vUserName2 = Environment.UserDomainName + "\\" + Environment.UserName;
+                        logger.Info("Environment.UserDomainName\\Environment.UserName: " + vUserName2);
+
+                        app = Application.Connect(authProps);
+                    }                      
+                }
+                else if (String.IsNullOrEmpty(username) && String.IsNullOrEmpty(password))
+                {
+                    DomainAuthenticationProperties authProps = Application.CreateDomainAuthenticationProperties(url, datasource);
+
+                    string userName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
+                    logger.Info("Attempting to make a Domain connection using Principal.WindowsIdentity.GetCurrent().Name: " + userName);
+
+                    string vUserName2 = Environment.UserDomainName + "\\" + Environment.UserName;
+                    logger.Info("Environment.UserDomainName\\Environment.UserName: " + vUserName2);        
+
                     app = Application.Connect(authProps);
                 }
                 else
@@ -32,31 +54,48 @@ namespace RSIOnBaseUnity
                     authProps.LicenseType = LicenseType.Default;
                     logger.Info("Attempting to make a OnBase User connection...");
                     app = Application.Connect(authProps);
-                }                                                 
+                }
             }
-            catch (MaxLicensesException)
+            catch (MaxLicensesException ex)
             {
                 logger.Error("Error: All available licenses have been consumed.");
+                logger.Error(ex.Message, ex);
+                throw ex;
             }
-            catch (SystemLockedOutException)
+            catch (SystemLockedOutException ex)
             {
                 logger.Error("Error: The system is currently in lockout mode.");
+                logger.Error(ex.Message, ex);
+                throw ex;
             }
-            catch (InvalidLoginException)
+            catch (InvalidLoginException ex)
             {
                 logger.Error("Error: Invalid Login Credentials.");
+                logger.Error(ex.Message, ex);
+                throw ex;
             }
-            catch (AuthenticationFailedException)
+            catch (AuthenticationFailedException ex)
             {
                 logger.Error("Error: NT Authentication Failed.");
+                logger.Error(ex.Message, ex);
+                throw ex;
             }
-            catch (MaxConcurrentLicensesException)
+            catch (MaxConcurrentLicensesException ex)
             {
                 logger.Error("Error: All concurrent licenses for this user group have been consumed.");
+                logger.Error(ex.Message, ex);
+                throw ex;
             }
-            catch (InvalidLicensingException)
+            catch (InvalidLicensingException ex)
             {
                 logger.Error("Error: Invalid Licensing.");
+                logger.Error(ex.Message, ex);
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                logger.Error(ex.Message, ex);
+                throw ex;
             }
 
             if (app != null)
@@ -185,8 +224,28 @@ namespace RSIOnBaseUnity
                     foreach (var kt in keywordRecordType.KeywordTypes)
                     {
                         if (content.keywords.ContainsKey(kt.Name))
-                        {
-                            documentQuery.AddKeyword(kt.CreateKeyword(content.keywords[kt.Name]));
+                        {   
+                            switch (kt.DataType)
+                            {
+                                case KeywordDataType.AlphaNumeric:
+                                    documentQuery.AddKeyword(kt.CreateKeyword(content.keywords[kt.Name]));
+                                    break;
+                                case KeywordDataType.Currency:
+                                case KeywordDataType.SpecificCurrency:
+                                case KeywordDataType.Numeric20:
+                                    documentQuery.AddKeyword(kt.CreateKeyword(decimal.Parse(content.keywords[kt.Name])));
+                                    break;
+                                case KeywordDataType.Date:
+                                case KeywordDataType.DateTime:
+                                    documentQuery.AddKeyword(kt.CreateKeyword(DateTime.Parse(content.keywords[kt.Name]))); 
+                                    break;
+                                case KeywordDataType.FloatingPoint:
+                                    documentQuery.AddKeyword(kt.CreateKeyword(double.Parse(content.keywords[kt.Name])));   
+                                    break;
+                                case KeywordDataType.Numeric9:
+                                    documentQuery.AddKeyword(kt.CreateKeyword(long.Parse(content.keywords[kt.Name])));     
+                                    break;
+                            }
                         }
                     }
 

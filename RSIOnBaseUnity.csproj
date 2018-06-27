@@ -85,6 +85,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Impersonation.cs" />
     <Compile Include="Content.cs" />
     <Compile Include="UnityBroker.cs" />
     <Compile Include="OnBaseUnityAPI.cs" />
