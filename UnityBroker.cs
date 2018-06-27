@@ -24,14 +24,13 @@ namespace RSIOnBaseUnity
                 if (!String.IsNullOrEmpty(domain) && !String.IsNullOrEmpty(username) && !String.IsNullOrEmpty(password))
                 {
                     DomainAuthenticationProperties authProps = Application.CreateDomainAuthenticationProperties(url, datasource);
-                    logger.Info("Impersonation : " + domain + " " + username + " " + password);
+                    logger.Info("Impersonation : " + domain + " " + username);
                     using (new Impersonation(domain, username, password))
                     {
-                        string userName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
-                        logger.Info("Attempting to make a Domain connection using Principal.WindowsIdentity.GetCurrent().Name: " + userName);
-
-                        string vUserName2 = Environment.UserDomainName + "\\" + Environment.UserName;
-                        logger.Info("Environment.UserDomainName\\Environment.UserName: " + vUserName2);
+                        //string userName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
+                        //logger.Info("Attempting to make a Domain connection using Principal.WindowsIdentity.GetCurrent().Name: " + userName);
+                        //string vUserName2 = Environment.UserDomainName + "\\" + Environment.UserName;
+                        //logger.Info("Environment.UserDomainName\\Environment.UserName: " + vUserName2);
 
                         app = Application.Connect(authProps);
                     }                      
@@ -41,10 +40,10 @@ namespace RSIOnBaseUnity
                     DomainAuthenticationProperties authProps = Application.CreateDomainAuthenticationProperties(url, datasource);
 
                     string userName = System.Security.Principal.WindowsIdentity.GetCurrent().Name;
-                    logger.Info("Attempting to make a Domain connection using Principal.WindowsIdentity.GetCurrent().Name: " + userName);
+                    logger.Info("Make a Domain connection for user: " + userName);
 
-                    string vUserName2 = Environment.UserDomainName + "\\" + Environment.UserName;
-                    logger.Info("Environment.UserDomainName\\Environment.UserName: " + vUserName2);        
+                    //string vUserName2 = Environment.UserDomainName + "\\" + Environment.UserName;
+                    //logger.Info("Environment.UserDomainName\\Environment.UserName: " + vUserName2);        
 
                     app = Application.Connect(authProps);
                 }
@@ -52,7 +51,7 @@ namespace RSIOnBaseUnity
                 {
                     AuthenticationProperties authProps = Application.CreateOnBaseAuthenticationProperties(url, username, password, datasource);
                     authProps.LicenseType = LicenseType.Default;
-                    logger.Info("Attempting to make a OnBase User connection...");
+                    logger.Info("Make OnBase User connection...");
                     app = Application.Connect(authProps);
                 }
             }
@@ -106,7 +105,7 @@ namespace RSIOnBaseUnity
         } 
         public static void Disconnect(Application app)
         {
-            logger.Info("Attempting to close connection...");
+            logger.Info("Close connection...");
 
             try
             {
@@ -126,7 +125,7 @@ namespace RSIOnBaseUnity
         
         public static void GetConfigInfo(Application app, string documentsDir)
         {
-            logger.Info("Attempting to Get Config Info");
+            logger.Info("Get Config Info");
 
             List<RSIDocumentTypeGroup> rsiDTGs = new List<RSIDocumentTypeGroup>();
             foreach (var dtg in app.Core.DocumentTypeGroups)
@@ -193,7 +192,7 @@ namespace RSIOnBaseUnity
         }
         public static List<long> QueryDocuments(Application app, string documentsDir)
         {
-            logger.Info("Attempting to execute a document query...");
+            logger.Info("Execute document query...");
             List<long> documentIdList = new List<long>();
             string filePath = documentsDir + "\\query.json";
             if (File.Exists(filePath))
@@ -254,7 +253,11 @@ namespace RSIOnBaseUnity
                         logger.Info("Number of " + content.documentType + " Documents Found: " + queryResults.QueryResultItems.Count().ToString());  
                         foreach (QueryResultItem queryResultItem in queryResults.QueryResultItems)
                         {
-                            documentIdList.Add(queryResultItem.Document.ID);
+                            if (!documentIdList.Contains(queryResultItem.Document.ID))
+                            {
+                                documentIdList.Add(queryResultItem.Document.ID);
+                            }                                                   
+
                             logger.Info(string.Format("Document ID: {0}", queryResultItem.Document.ID.ToString()));
                             logger.Info(string.Format("Author: {0}, Document Date: {1}, Archival Date: {2}", queryResultItem.DisplayColumns[0].Value.ToString(), DateTime.Parse(queryResultItem.DisplayColumns[1].Value.ToString()).ToShortDateString(), DateTime.Parse(queryResultItem.DisplayColumns[2].Value.ToString()).ToShortDateString()));
 
@@ -272,7 +275,7 @@ namespace RSIOnBaseUnity
         }
         public static void GetDocumentData(Application app, List<long> documentIdList, string documentsDir)
         {
-            logger.Info("Attempting to Get Document Data...");
+            logger.Info("Get Document Data...");
 
             foreach (var docID in documentIdList)
             {
@@ -306,7 +309,7 @@ namespace RSIOnBaseUnity
         }
         public static void ArchiveDocument(Application app, string documentsDir, string documentTypeGroup)
         {
-            logger.Info("Attempting to archive documents...");
+            logger.Info("Archive (upload) documents...");
             try
             {                                       
                 string filePath = documentsDir + "\\archive.json";
@@ -315,7 +318,7 @@ namespace RSIOnBaseUnity
                     logger.Info("Archive config file found: " + filePath);
                     string inputJSON = File.ReadAllText(filePath);
 
-                    logger.Info("Attempting to Get Document Type Group: " + documentTypeGroup);
+                    logger.Info("Get Document Type Group: " + documentTypeGroup);
                     DocumentTypeGroup docTypeGroup = app.Core.DocumentTypeGroups.Find(documentTypeGroup);
                     if (docTypeGroup == null)
                     {
@@ -328,14 +331,14 @@ namespace RSIOnBaseUnity
                     {
                         Content content = jToken.ToObject<Content>();
                         logger.Info("");
-                        logger.Info("Attempting to Get Document Type: " + content.documentType);
+                        logger.Info("Get Document Type: " + content.documentType);
                         DocumentType docType = docTypeGroup.DocumentTypes.Find(content.documentType);
                         if (docType == null)
                         {
                             throw new Exception("Document type was not found");
                         }
 
-                        logger.Info("Attempting to Get File Type: " + content.fileTypes[0]);
+                        logger.Info("Get File Type: " + content.fileTypes[0]);
                         FileType fType = app.Core.FileTypes.Find(content.fileTypes[0]);
                         if (fType == null)
                         {
@@ -410,7 +413,7 @@ namespace RSIOnBaseUnity
         }
         public static void Reindex(Application app, string documentsDir)
         {
-            logger.Info("Attempting to re-index document by updating a keyword...");
+            logger.Info("Re-index document by updating a keyword...");
             try
             {
                 string filePath = documentsDir + "\\reindex.json";
@@ -424,7 +427,7 @@ namespace RSIOnBaseUnity
                     {
                         Content content = jToken.ToObject<Content>();
 
-                        logger.Info("Attempting to Get Document ID: " + content.documentID);
+                        logger.Info("Get Document ID: " + content.documentID);
                         long documentId = long.Parse(content.documentID);
                         Document document = app.Core.GetDocumentByID(documentId, DocumentRetrievalOptions.LoadKeywords);
                         if (document == null)
